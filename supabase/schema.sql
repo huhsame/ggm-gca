@@ -135,3 +135,65 @@ create policy "본인 폴더 사진만 삭제"
     bucket_id = 'product-images'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ============================================================
+-- 좋아요(찜) — product_likes
+-- ============================================================
+
+-- 10) 좋아요 테이블. (한 사람이 한 글에 한 번만 → 복합 기본키)
+create table if not exists public.product_likes (
+  product_id uuid not null references public.products (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (product_id, user_id)
+);
+
+alter table public.product_likes enable row level security;
+
+--   - 좋아요는 누구나 볼 수 있다(개수 표시용)
+drop policy if exists "좋아요 누구나 조회" on public.product_likes;
+create policy "좋아요 누구나 조회"
+  on public.product_likes for select using (true);
+
+--   - 본인만 좋아요를 누를 수 있다
+drop policy if exists "본인만 좋아요 추가" on public.product_likes;
+create policy "본인만 좋아요 추가"
+  on public.product_likes for insert with check (auth.uid() = user_id);
+
+--   - 본인 좋아요만 취소 가능
+drop policy if exists "본인 좋아요만 취소" on public.product_likes;
+create policy "본인 좋아요만 취소"
+  on public.product_likes for delete using (auth.uid() = user_id);
+
+-- ============================================================
+-- 댓글 — product_comments
+-- ============================================================
+
+-- 11) 댓글 테이블
+create table if not exists public.product_comments (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.products (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists product_comments_product_idx
+  on public.product_comments (product_id, created_at);
+
+alter table public.product_comments enable row level security;
+
+--   - 댓글은 누구나 볼 수 있다
+drop policy if exists "댓글 누구나 조회" on public.product_comments;
+create policy "댓글 누구나 조회"
+  on public.product_comments for select using (true);
+
+--   - 로그인한 사람만, 본인 이름으로 댓글 작성
+drop policy if exists "본인만 댓글 작성" on public.product_comments;
+create policy "본인만 댓글 작성"
+  on public.product_comments for insert with check (auth.uid() = user_id);
+
+--   - 본인 댓글만 삭제 가능
+drop policy if exists "본인 댓글만 삭제" on public.product_comments;
+create policy "본인 댓글만 삭제"
+  on public.product_comments for delete using (auth.uid() = user_id);

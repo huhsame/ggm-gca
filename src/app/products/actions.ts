@@ -152,3 +152,86 @@ export async function deleteProduct(id: string) {
   revalidatePath("/products");
   redirect("/products");
 }
+
+// 좋아요 토글 — 안 눌렀으면 추가, 이미 눌렀으면 취소
+export async function toggleLike(productId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?info=" + encodeURIComponent("좋아요는 로그인 후 누를 수 있어요."));
+  }
+
+  // 이미 눌렀는지 확인
+  const { data: existing } = await supabase
+    .from("product_likes")
+    .select("product_id")
+    .eq("product_id", productId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existing) {
+    // 이미 눌렀음 → 취소
+    await supabase
+      .from("product_likes")
+      .delete()
+      .eq("product_id", productId)
+      .eq("user_id", user.id);
+  } else {
+    // 안 눌렀음 → 추가
+    await supabase
+      .from("product_likes")
+      .insert({ product_id: productId, user_id: user.id });
+  }
+
+  revalidatePath(`/products/${productId}`);
+}
+
+// 댓글 작성
+export async function addComment(productId: string, formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?info=" + encodeURIComponent("댓글은 로그인 후 쓸 수 있어요."));
+  }
+
+  const content = String(formData.get("content") ?? "").trim();
+
+  // 빈 댓글이면 아무것도 안 하고 돌아감
+  if (!content) {
+    redirect(`/products/${productId}`);
+  }
+
+  await supabase
+    .from("product_comments")
+    .insert({ product_id: productId, user_id: user.id, content });
+
+  revalidatePath(`/products/${productId}`);
+  redirect(`/products/${productId}`);
+}
+
+// 댓글 삭제 (본인 댓글만)
+export async function deleteComment(commentId: string, productId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?info=" + encodeURIComponent("로그인이 필요해요."));
+  }
+
+  await supabase
+    .from("product_comments")
+    .delete()
+    .eq("id", commentId)
+    .eq("user_id", user.id);
+
+  revalidatePath(`/products/${productId}`);
+  redirect(`/products/${productId}`);
+}
