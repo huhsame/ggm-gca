@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fff8f1; /* 군고구마 크림 배경 */
+  --foreground: #2b1d12; /* 진한 갈색 텍스트 */
+  --sweet: #f97316; /* 메인: 군고구마 주황 */
+  --sweet-dark: #ea580c;
+  --grape: #7c3aed; /* 포인트: 고구마 껍질 보라 */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-sweet: var(--sweet);
+  --color-sweet-dark: var(--sweet-dark);
+  --color-grape: var(--grape);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
