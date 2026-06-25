@@ -30,7 +30,6 @@ export default async function NewProductPage({
 
         <form
           action={createProduct}
-          encType="multipart/form-data"
           className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5"
         >
           {error && (
