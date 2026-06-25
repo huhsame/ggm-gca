@@ -19,7 +19,7 @@ export default async function ProductDetailPage({
 
   const { data: product } = await supabase
     .from("products")
-    .select("id, seller_id, title, price, description, status, created_at")
+    .select("id, seller_id, title, price, description, status, image_url, created_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -53,7 +53,16 @@ export default async function ProductDetailPage({
           ← 목록으로
         </Link>
 
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
+        <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+          {product.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={product.image_url}
+              alt={product.title}
+              className="max-h-96 w-full object-cover"
+            />
+          )}
+          <div className="p-6">
           <div className="mb-3 flex items-center gap-2">
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(product.status)}`}
@@ -94,6 +103,7 @@ export default async function ProductDetailPage({
               </form>
             </div>
           )}
+          </div>
         </div>
       </main>
     </div>

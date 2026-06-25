@@ -62,9 +62,13 @@ create table if not exists public.products (
   price integer not null default 0,           -- 원 단위. 0 = 무료나눔
   description text not null default '',
   status text not null default '판매중',       -- 판매중 / 예약중 / 거래완료
+  image_url text,                              -- 대표 사진 주소(없으면 null)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- 이미 products 테이블이 있는 경우를 위해 컬럼만 따로 추가(있으면 무시)
+alter table public.products add column if not exists image_url text;
 
 -- 최신글이 먼저 나오도록 정렬용 인덱스
 create index if not exists products_created_at_idx
@@ -97,3 +101,37 @@ drop policy if exists "본인 글만 삭제" on public.products;
 create policy "본인 글만 삭제"
   on public.products for delete
   using (auth.uid() = seller_id);
+
+-- ============================================================
+-- 판매글 사진 저장소(Storage) — product-images 버킷
+-- ============================================================
+
+-- 8) 공개(public) 버킷 만들기. 이미 있으면 무시.
+insert into storage.buckets (id, name, public)
+values ('product-images', 'product-images', true)
+on conflict (id) do nothing;
+
+-- 9) 버킷 정책
+--   - 사진은 누구나 볼 수 있다(공개 버킷)
+drop policy if exists "판매글 사진 누구나 조회" on storage.objects;
+create policy "판매글 사진 누구나 조회"
+  on storage.objects for select
+  using (bucket_id = 'product-images');
+
+--   - 로그인한 사람만 자기 폴더(앞부분이 본인 id)에 올릴 수 있다
+drop policy if exists "본인 폴더에만 사진 업로드" on storage.objects;
+create policy "본인 폴더에만 사진 업로드"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'product-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+--   - 본인 폴더 사진만 삭제 가능
+drop policy if exists "본인 폴더 사진만 삭제" on storage.objects;
+create policy "본인 폴더 사진만 삭제"
+  on storage.objects for delete
+  using (
+    bucket_id = 'product-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );

@@ -25,7 +25,7 @@ export default async function EditProductPage({
 
   const { data: product } = await supabase
     .from("products")
-    .select("id, seller_id, title, price, description, status")
+    .select("id, seller_id, title, price, description, status, image_url")
     .eq("id", id)
     .maybeSingle();
 
@@ -50,6 +50,7 @@ export default async function EditProductPage({
 
         <form
           action={updateThis}
+          encType="multipart/form-data"
           className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5"
         >
           {error && (
@@ -57,6 +58,30 @@ export default async function EditProductPage({
               {error}
             </p>
           )}
+
+          <div>
+            <label className="mb-1 block text-sm font-medium" htmlFor="image">
+              대표 사진
+            </label>
+            {product.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={product.image_url}
+                alt="현재 사진"
+                className="mb-2 h-40 w-full rounded-lg object-cover ring-1 ring-black/5"
+              />
+            )}
+            <input
+              id="image"
+              name="image"
+              type="file"
+              accept="image/*"
+              className="block w-full text-sm text-foreground/70 file:mr-3 file:rounded-lg file:border-0 file:bg-sweet/15 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-sweet-dark hover:file:bg-sweet/25"
+            />
+            <p className="mt-1 text-xs text-foreground/50">
+              새 사진을 고르면 바뀌고, 그냥 두면 지금 사진이 유지돼요.
+            </p>
+          </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium" htmlFor="title">

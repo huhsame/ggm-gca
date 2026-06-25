@@ -8,6 +8,7 @@ type Product = {
   title: string;
   price: number;
   status: string;
+  image_url: string | null;
   created_at: string;
 };
 
@@ -20,7 +21,7 @@ export default async function ProductsPage() {
 
   const { data: products } = await supabase
     .from("products")
-    .select("id, title, price, status, created_at")
+    .select("id, title, price, status, image_url, created_at")
     .order("created_at", { ascending: false });
 
   const list = (products ?? []) as Product[];
@@ -52,9 +53,22 @@ export default async function ProductsPage() {
               <li key={p.id}>
                 <Link
                   href={`/products/${p.id}`}
-                  className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5 transition hover:ring-sweet/40"
+                  className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5 transition hover:ring-sweet/40"
                 >
-                  <div className="min-w-0">
+                  {/* 썸네일: 사진 있으면 보여주고, 없으면 고구마 자리표시 */}
+                  {p.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.image_url}
+                      alt={p.title}
+                      className="h-16 w-16 shrink-0 rounded-lg object-cover ring-1 ring-black/5"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-sweet/10 text-2xl">
+                      🍠
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(p.status)}`}

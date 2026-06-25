@@ -3,6 +3,31 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+const BUCKET = "product-images";
+
+// 사진 파일을 Storage 에 올리고 공개 주소를 돌려준다. (사진이 없으면 null)
+async function uploadImage(
+  supabase: SupabaseClient,
+  userId: string,
+  file: File | null,
+): Promise<string | null> {
+  if (!file || file.size === 0) return null;
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  // 본인 폴더(userId) 안에 시간 기반 이름으로 저장 → 파일명 충돌/한글 깨짐 방지
+  const path = `${userId}/${Date.now()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { contentType: file.type || "image/jpeg" });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
 
 // 폼에서 넘어온 값으로 판매글 데이터를 만든다(생성/수정 공용)
 function readForm(formData: FormData) {
@@ -40,9 +65,20 @@ export async function createProduct(formData: FormData) {
     redirect("/products/new?error=" + encodeURIComponent("제목을 입력해 주세요."));
   }
 
+  // 사진이 있으면 먼저 Storage 에 올리고 주소를 받는다
+  const image = formData.get("image") as File | null;
+  let imageUrl: string | null = null;
+  try {
+    imageUrl = await uploadImage(supabase, user.id, image);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "사진 업로드에 실패했어요.";
+    redirect("/products/new?error=" + encodeURIComponent(msg));
+  }
+
   const { error } = await supabase.from("products").insert({
     seller_id: user.id,
     ...fields,
+    image_url: imageUrl,
   });
 
   if (error) {
@@ -70,10 +106,24 @@ export async function updateProduct(id: string, formData: FormData) {
     redirect(`/products/${id}/edit?error=` + encodeURIComponent("제목을 입력해 주세요."));
   }
 
+  // 새 사진을 골랐을 때만 업로드해서 주소를 갈아끼운다(안 고르면 기존 사진 유지)
+  const image = formData.get("image") as File | null;
+  const updateData: Record<string, unknown> = {
+    ...fields,
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    const newUrl = await uploadImage(supabase, user.id, image);
+    if (newUrl) updateData.image_url = newUrl;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "사진 업로드에 실패했어요.";
+    redirect(`/products/${id}/edit?error=` + encodeURIComponent(msg));
+  }
+
   // 본인 글만 수정되도록 seller_id 조건을 한 번 더 건다(보안정책 + 코드 이중 안전)
   const { error } = await supabase
     .from("products")
-    .update({ ...fields, updated_at: new Date().toISOString() })
+    .update(updateData)
     .eq("id", id)
     .eq("seller_id", user.id);
 

@@ -30,6 +30,7 @@ export default async function NewProductPage({
 
         <form
           action={createProduct}
+          encType="multipart/form-data"
           className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5"
         >
           {error && (
@@ -37,6 +38,22 @@ export default async function NewProductPage({
               {error}
             </p>
           )}
+
+          <div>
+            <label className="mb-1 block text-sm font-medium" htmlFor="image">
+              대표 사진
+            </label>
+            <input
+              id="image"
+              name="image"
+              type="file"
+              accept="image/*"
+              className="block w-full text-sm text-foreground/70 file:mr-3 file:rounded-lg file:border-0 file:bg-sweet/15 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-sweet-dark hover:file:bg-sweet/25"
+            />
+            <p className="mt-1 text-xs text-foreground/50">
+              사진은 한 장만 올릴 수 있어요. (선택사항)
+            </p>
+          </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium" htmlFor="title">
