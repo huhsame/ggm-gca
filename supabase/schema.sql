@@ -49,3 +49,51 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ============================================================
+-- 판매글(products) — 중고거래 글. (사진은 아직 없음)
+-- ============================================================
+
+-- 5) 판매글 테이블
+create table if not exists public.products (
+  id uuid primary key default gen_random_uuid(),
+  seller_id uuid not null references auth.users (id) on delete cascade,
+  title text not null,
+  price integer not null default 0,           -- 원 단위. 0 = 무료나눔
+  description text not null default '',
+  status text not null default '판매중',       -- 판매중 / 예약중 / 거래완료
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 최신글이 먼저 나오도록 정렬용 인덱스
+create index if not exists products_created_at_idx
+  on public.products (created_at desc);
+
+-- 6) RLS(행 수준 보안) 켜기
+alter table public.products enable row level security;
+
+-- 7) 정책
+--   - 판매글은 누구나 볼 수 있다(로그인 안 해도 구경 가능)
+drop policy if exists "판매글은 누구나 조회" on public.products;
+create policy "판매글은 누구나 조회"
+  on public.products for select
+  using (true);
+
+--   - 로그인한 사람만 글을 쓸 수 있고, 작성자는 본인이어야 한다
+drop policy if exists "본인 글만 작성" on public.products;
+create policy "본인 글만 작성"
+  on public.products for insert
+  with check (auth.uid() = seller_id);
+
+--   - 본인 글만 수정 가능
+drop policy if exists "본인 글만 수정" on public.products;
+create policy "본인 글만 수정"
+  on public.products for update
+  using (auth.uid() = seller_id);
+
+--   - 본인 글만 삭제 가능
+drop policy if exists "본인 글만 삭제" on public.products;
+create policy "본인 글만 삭제"
+  on public.products for delete
+  using (auth.uid() = seller_id);

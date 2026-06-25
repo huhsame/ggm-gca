@@ -78,10 +78,12 @@ export default async function Home({
 
         <div className="mt-8">
           {user ? (
-            <p className="text-foreground/70">
-              <b className="text-grape">{nickname}</b>님, 환영해요! 곧 거래 기능이
-              열릴 거예요 🛒
-            </p>
+            <Link
+              href="/products"
+              className="inline-block rounded-xl bg-sweet px-6 py-3 font-semibold text-white transition hover:bg-sweet-dark"
+            >
+              판매글 보러가기 🛒
+            </Link>
           ) : (
             <Link
               href="/signup"
